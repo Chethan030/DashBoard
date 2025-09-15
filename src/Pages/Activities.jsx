@@ -8,6 +8,9 @@ export default function Activities() {
   });
 
   const [activities, setActivities] = useState([]);
+  const [editId, setEditId] = useState(null); // 🔁 New state to track if editing
+
+  const host_url = "http://127.0.0.1:8000/";
 
   // Handle text input
   const handleChange = (e) => {
@@ -19,12 +22,10 @@ export default function Activities() {
     setFormData({ ...formData, image: e.target.files[0] });
   };
 
-  // Fetch existing activities
+  // Fetch activities
   const fetchActivities = async () => {
     try {
-      const response = await fetch(
-        "https://vande-mataram-2.onrender.com/gukulam_activities/"
-      );
+      const response = await fetch(host_url + "gukulam_activities/");
       if (response.ok) {
         const data = await response.json();
         setActivities(data);
@@ -38,11 +39,9 @@ export default function Activities() {
     fetchActivities();
   }, []);
 
-  // Submit handler
+  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const url = "https://vande-mataram-2.onrender.com/gukulam_activities/";
 
     const formDataToSend = new FormData();
     formDataToSend.append("title", formData.title);
@@ -51,16 +50,19 @@ export default function Activities() {
       formDataToSend.append("image", formData.image);
     }
 
+    const url = host_url + "gukulam_activities/" + (editId ? `${editId}/` : "");
+
     try {
       const response = await fetch(url, {
-        method: "POST",
+        method: editId ? "PUT" : "POST", // 🔁 Use PUT when editing
         body: formDataToSend,
       });
 
       if (response.ok) {
-        alert("Gurukulam Activity added successfully!");
+        alert(editId ? "Activity updated!" : "Activity added!");
         setFormData({ title: "", des: "", image: null });
-        fetchActivities(); // refresh list
+        setEditId(null); // 🔁 Reset edit mode
+        fetchActivities();
       } else {
         const error = await response.json();
         alert("Error: " + JSON.stringify(error));
@@ -70,13 +72,14 @@ export default function Activities() {
     }
   };
 
-  // Delete handler
+  // Delete
   const handleDelete = async (id) => {
-    const url = `https://vande-mataram-2.onrender.com/gukulam_activities/${id}/`;
     if (!confirm("Are you sure you want to delete this activity?")) return;
 
     try {
-      const response = await fetch(url, { method: "DELETE" });
+      const response = await fetch(host_url + `gukulam_activities/${id}/`, {
+        method: "DELETE",
+      });
       if (response.ok) {
         alert("Deleted successfully!");
         fetchActivities();
@@ -88,11 +91,30 @@ export default function Activities() {
     }
   };
 
+  // Edit
+  const handleEdit = (activity) => {
+    setFormData({
+      title: activity.title,
+      des: activity.des,
+      image: null, // File can't be prefilled in input
+    });
+    setEditId(activity.id);
+    window.scrollTo({ top: 0, behavior: "smooth" }); // optional
+  };
+
+  // Cancel Edit
+  const cancelEdit = () => {
+    setFormData({ title: "", des: "", image: null });
+    setEditId(null);
+  };
+
   return (
     <div className="p-6 flex gap-6">
       {/* Left side: form */}
       <div className="w-1/2">
-        <h2 className="text-2xl font-semibold mb-6">Add Gurukulam Activity</h2>
+        <h2 className="text-2xl font-semibold mb-6">
+          {editId ? "Edit Activity" : "Add Gurukulam Activity"}
+        </h2>
 
         <form
           onSubmit={handleSubmit}
@@ -134,17 +156,30 @@ export default function Activities() {
               accept="image/*"
               onChange={handleFileChange}
               className="w-full"
-              required
+              // Only required when adding
+              required={!editId}
             />
           </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Submit
-          </button>
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              {editId ? "Update" : "Submit"}
+            </button>
+
+            {editId && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -177,7 +212,7 @@ export default function Activities() {
                   {/* Actions */}
                   <div className="mt-2 flex gap-2">
                     <button
-                      onClick={() => alert("Edit feature coming soon!")}
+                      onClick={() => handleEdit(act)}
                       className="px-3 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600"
                     >
                       Edit
