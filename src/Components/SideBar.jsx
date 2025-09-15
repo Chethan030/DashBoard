@@ -9,6 +9,7 @@ export default function Sidebar() {
         <Link to="/activities" className="hover:bg-gray-200 p-2 rounded">Activities</Link>
         <Link to="/gallery" className="hover:bg-gray-200 p-2 rounded">Gallery</Link>
         <Link to="/team" className="hover:bg-gray-200 p-2 rounded">Team</Link>
+        <Link to="/board_team" className="hover:bg-gray-200 p-2 rounded">Board Team</Link>
         <Link to="/news" className="hover:bg-gray-200 p-2 rounded">News</Link>
         <Link to="/users" className="hover:bg-gray-200 p-2 rounded">Users</Link>
       </nav>
