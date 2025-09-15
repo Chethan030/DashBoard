@@ -14,7 +14,11 @@ const Login = () => {
       localStorage.setItem('token', response.data.access);
       setTimeout(() => navigate('/home'), 2000);
     } catch (error) {
-      alert(error)
+      if (error.response.status===401){
+alert('username or password is wrong ')
+      }
+      else{
+      alert(error)}
     }
   };
 
