@@ -1,31 +1,27 @@
 import { useState, useEffect } from "react";
+import axios from '../service/api'; // Make sure baseURL is configured here
 
 export default function GalleryToggle() {
   const [galleryType, setGalleryType] = useState("gurukulam"); // "gurukulam" | "adrishya"
   const [formData, setFormData] = useState({ date: "", image: null });
   const [images, setImages] = useState([]);
 
-  const host_url = "http://127.0.0.1:8000/";
   const endpoint = `gallery/${galleryType}/`;
 
   // GET
   const fetchGallery = async () => {
     try {
-      const res = await fetch(host_url + endpoint);
-      if (res.ok) {
-        const data = await res.json();
-        setImages(Array.isArray(data) ? data : [data]);
-      } else {
-        console.error("Failed to fetch images");
-      }
+      const res = await axios.get(endpoint);
+      const data = res.data;
+      setImages(Array.isArray(data) ? data : [data]);
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error fetching gallery:", err);
     }
   };
 
   useEffect(() => {
     fetchGallery();
-    setFormData({ date: "", image: null }); // reset form when toggle
+    setFormData({ date: "", image: null }); // Reset form when toggling
   }, [galleryType]);
 
   // FORM
@@ -38,26 +34,23 @@ export default function GalleryToggle() {
   // POST
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const form = new FormData();
     form.append("date", formData.date);
     form.append(galleryType === "gurukulam" ? "images" : "image", formData.image);
 
     try {
-      const res = await fetch(host_url + endpoint, {
-        method: "POST",
-        body: form,
+      await axios.post(endpoint, form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
-
-      if (res.ok) {
-        alert("Image uploaded!");
-        setFormData({ date: "", image: null });
-        fetchGallery();
-      } else {
-        const error = await res.json();
-        alert("Upload failed: " + JSON.stringify(error));
-      }
+      alert("Image uploaded!");
+      setFormData({ date: "", image: null });
+      fetchGallery();
     } catch (err) {
-      alert("Upload error: " + err.message);
+      console.error("Upload error:", err);
+      alert("Upload failed: " + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -65,17 +58,12 @@ export default function GalleryToggle() {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure to delete this image?")) return;
     try {
-      const res = await fetch(`${host_url}${endpoint}${id}/`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        alert("Deleted!");
-        fetchGallery();
-      } else {
-        alert("Failed to delete.");
-      }
+      await axios.delete(`${endpoint}${id}/`);
+      alert("Deleted!");
+      fetchGallery();
     } catch (err) {
-      alert("Delete error: " + err.message);
+      console.error("Delete error:", err);
+      alert("Failed to delete.");
     }
   };
 

@@ -5,7 +5,7 @@ export default function Sidebar() {
     <div className="w-64 h-screen bg-gray-100 border-r flex flex-col p-4">
       <h2 className="text-xl font-bold mb-6">Menu</h2>
       <nav className="flex flex-col space-y-3">
-        <Link to="/" className="hover:bg-gray-200 p-2 rounded">Home</Link>
+        <Link to="/home" className="hover:bg-gray-200 p-2 rounded">Home</Link>
         <Link to="/activities" className="hover:bg-gray-200 p-2 rounded">Activities</Link>
         <Link to="/gallery" className="hover:bg-gray-200 p-2 rounded">Gallery</Link>
         <Link to="/team" className="hover:bg-gray-200 p-2 rounded">Team</Link>
