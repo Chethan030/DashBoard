@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "../service/api"; // Make sure your axios instance is properly configured
 
 export default function Team() {
   const [formData, setFormData] = useState({
@@ -11,15 +12,13 @@ export default function Team() {
   const [team, setTeam] = useState([]);
   const [editId, setEditId] = useState(null);
 
-  const host_url = "http://127.0.0.1:8000/";
+  const endpoint = "team/";
 
+  // Fetch team members
   const fetchTeam = async () => {
     try {
-      const response = await fetch(host_url + "team/");
-      if (response.ok) {
-        const data = await response.json();
-        setTeam(data);
-      }
+      const response = await axios.get(endpoint);
+      setTeam(response.data);
     } catch (err) {
       console.error("Error fetching team:", err);
     }
@@ -37,6 +36,7 @@ export default function Team() {
     setFormData({ ...formData, image: e.target.files[0] });
   };
 
+  // Submit (add or update)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -48,52 +48,43 @@ export default function Team() {
       dataToSend.append("image", formData.image);
     }
 
-    const url = host_url + "team/" + (editId ? `${editId}/` : "");
-
     try {
-      const response = await fetch(url, {
-        method: editId ? "PUT" : "POST",
-        body: dataToSend,
-      });
-
-      if (response.ok) {
-        alert(editId ? "Team member updated!" : "Team member added!");
-        setFormData({
-          name: "",
-          designation: "",
-          des: "",
-          image: null,
+      if (editId) {
+        await axios.put(`${endpoint}${editId}/`, dataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
-        setEditId(null);
-        fetchTeam();
+        alert("Team member updated!");
       } else {
-        const error = await response.json();
-        alert("Error: " + JSON.stringify(error));
+        await axios.post(endpoint, dataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Team member added!");
       }
+
+      setFormData({ name: "", designation: "", des: "", image: null });
+      setEditId(null);
+      fetchTeam();
     } catch (err) {
-      alert("Failed to submit: " + err.message);
+      console.error("Submit error:", err);
+      alert("Failed to submit: " + (err.response?.data?.detail || err.message));
     }
   };
 
+  // Delete
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this member?")) return;
 
     try {
-      const res = await fetch(host_url + `team/${id}/`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        alert("Deleted successfully!");
-        fetchTeam();
-      } else {
-        alert("Failed to delete.");
-      }
+      await axios.delete(`${endpoint}${id}/`);
+      alert("Deleted successfully!");
+      fetchTeam();
     } catch (err) {
-      alert("Delete error: " + err.message);
+      console.error("Delete error:", err);
+      alert("Failed to delete.");
     }
   };
 
+  // Edit
   const handleEdit = (member) => {
     setFormData({
       name: member.name,
@@ -106,12 +97,7 @@ export default function Team() {
   };
 
   const cancelEdit = () => {
-    setFormData({
-      name: "",
-      designation: "",
-      des: "",
-      image: null,
-    });
+    setFormData({ name: "", designation: "", des: "", image: null });
     setEditId(null);
   };
 
