@@ -6,6 +6,7 @@ import Activities from "./Pages/Activities";
 import EventGallery from "./Pages/Gallery";
 import News from "./Pages/News";
 import Team from "./Pages/Team";
+import SteeringTeam from "./Pages/BoardTeam";
 function App() {
 
   return (
@@ -21,6 +22,7 @@ function App() {
               <Route path="/gallery" element={<EventGallery />} />
               <Route path="/news" element={<News />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/board_team" element={<SteeringTeam />} />
               {/* 
               
               <Route path="/users" element={<Users />} />
