@@ -1,235 +1,257 @@
 import { useState, useEffect } from "react";
+import api from "../service/api"; // your custom axios instance
 
-export default function Activities() {
-  const [formData, setFormData] = useState({
-    title: "",
-    des: "",
-    image: null,
-  });
+export default function ActivitiesDashboard() {
+  const [tab, setTab] = useState("gurukulam"); // gurukulam | adrishya
+  const [gurukulamData, setGurukulamData] = useState([]);
+  const [adrishyaData, setAdrishyaData] = useState([]);
+  const [form, setForm] = useState({ title: "", des: "", image: null });
+  const [editId, setEditId] = useState(null);
+  const [uploadImage, setUploadImage] = useState(null); // for 3rd API upload
+  const [uploadTarget, setUploadTarget] = useState(null); // activity ID
 
-  const [activities, setActivities] = useState([]);
-  const [editId, setEditId] = useState(null); // 🔁 New state to track if editing
-
-  const host_url = "http://127.0.0.1:8000/";
-
-  // Handle text input
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Endpoints
+  const endpoints = {
+    gurukulam: "gurukulam/activities/",
+    adrishya: "adrishya/activities/",
+    adrishyaImage: "adrishya/image/",
   };
 
-  // Handle file input
-  const handleFileChange = (e) => {
-    setFormData({ ...formData, image: e.target.files[0] });
-  };
-
-  // Fetch activities
-  const fetchActivities = async () => {
+  // Fetch Gurukulam
+  const fetchGurukulam = async () => {
     try {
-      const response = await fetch(host_url + "gukulam_activities/");
-      if (response.ok) {
-        const data = await response.json();
-        setActivities(data);
-      }
-    } catch (error) {
-      console.error("Error fetching activities:", error);
+      const res = await api.get(endpoints.gurukulam);
+      setGurukulamData(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Fetch Adrishya
+  const fetchAdrishya = async () => {
+    try {
+      const res = await api.get(endpoints.adrishya);
+      setAdrishyaData(res.data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   useEffect(() => {
-    fetchActivities();
+    fetchGurukulam();
+    fetchAdrishya();
   }, []);
 
-  // Handle form submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Handle form inputs
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
-    const formDataToSend = new FormData();
-    formDataToSend.append("title", formData.title);
-    formDataToSend.append("des", formData.des);
-    if (formData.image) {
-      formDataToSend.append("image", formData.image);
-    }
+  const handleFileChange = (e) =>
+    setForm({ ...form, image: e.target.files[0] });
 
-    const url = host_url + "gukulam_activities/" + (editId ? `${editId}/` : "");
-
-    try {
-      const response = await fetch(url, {
-        method: editId ? "PUT" : "POST", // 🔁 Use PUT when editing
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        alert(editId ? "Activity updated!" : "Activity added!");
-        setFormData({ title: "", des: "", image: null });
-        setEditId(null); // 🔁 Reset edit mode
-        fetchActivities();
-      } else {
-        const error = await response.json();
-        alert("Error: " + JSON.stringify(error));
-      }
-    } catch (error) {
-      alert("Failed to submit: " + error.message);
-    }
+  const resetForm = () => {
+    setForm({ title: "", des: "", image: null });
+    setEditId(null);
   };
 
-  // Delete
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this activity?")) return;
-
+  // Submit (Create/Update)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const response = await fetch(host_url + `gukulam_activities/${id}/`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        alert("Deleted successfully!");
-        fetchActivities();
-      } else {
-        alert("Failed to delete.");
+      if (tab === "gurukulam") {
+        const formData = new FormData();
+        formData.append("title", form.title);
+        formData.append("des", form.des);
+        if (form.image) formData.append("image", form.image);
+
+        if (editId) {
+          await api.put(`${endpoints.gurukulam}${editId}/`, formData);
+          alert("Gurukulam updated");
+        } else {
+          await api.post(endpoints.gurukulam, formData);
+          alert("Gurukulam created");
+        }
+        fetchGurukulam();
+      } else if (tab === "adrishya") {
+        const payload = { title: form.title, des: form.des };
+
+        if (editId) {
+          await api.put(`${endpoints.adrishya}${editId}/`, payload, {
+            headers: { "Content-Type": "application/json" },
+          });
+          alert("Adrishya updated");
+        } else {
+          await api.post(endpoints.adrishya, payload, {
+            headers: { "Content-Type": "application/json" },
+          });
+          alert("Adrishya created");
+        }
+        fetchAdrishya();
       }
-    } catch (error) {
-      alert("Error deleting: " + error.message);
+      resetForm();
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      alert("Error: " + JSON.stringify(err.response?.data));
     }
   };
 
   // Edit
   const handleEdit = (activity) => {
-    setFormData({
-      title: activity.title,
-      des: activity.des,
-      image: null, // File can't be prefilled in input
-    });
+    setForm({ title: activity.title, des: activity.des, image: null });
     setEditId(activity.id);
-    window.scrollTo({ top: 0, behavior: "smooth" }); // optional
   };
 
-  // Cancel Edit
-  const cancelEdit = () => {
-    setFormData({ title: "", des: "", image: null });
-    setEditId(null);
+  // Delete
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure?")) return;
+    try {
+      const endpoint = tab === "gurukulam" ? endpoints.gurukulam : endpoints.adrishya;
+      await api.delete(`${endpoint}${id}/`);
+      alert("Deleted successfully");
+      tab === "gurukulam" ? fetchGurukulam() : fetchAdrishya();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Upload Image for Adrishya (3rd API)
+  const handleImageUpload = async (e, activityId) => {
+    e.preventDefault();
+    if (!uploadImage) {
+      alert("Select an image first");
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append("adrishya", activityId); // FK id
+      formData.append("images", uploadImage);
+
+      await api.post(endpoints.adrishyaImage, formData);
+      alert("Image uploaded");
+      setUploadImage(null);
+      setUploadTarget(null);
+      fetchAdrishya(); // refresh
+    } catch (err) {
+      console.error(err.response?.data || err.message);
+      alert("Upload error: " + JSON.stringify(err.response?.data));
+    }
   };
 
   return (
-    <div className="p-6 flex gap-6">
-      {/* Left side: form */}
-      <div className="w-1/2">
-        <h2 className="text-2xl font-semibold mb-6">
-          {editId ? "Edit Activity" : "Add Gurukulam Activity"}
-        </h2>
-
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white shadow-md rounded p-6"
-          encType="multipart/form-data"
+    <div className="p-6 space-y-8">
+      {/* Tabs */}
+      <div className="flex gap-4">
+        <button
+          onClick={() => { setTab("gurukulam"); resetForm(); }}
+          className={`px-4 py-2 rounded ${tab === "gurukulam" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
         >
-          {/* Title */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Title</label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Description</label>
-            <textarea
-              name="des"
-              value={formData.des}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-              rows="4"
-              required
-            />
-          </div>
-
-          {/* Image Upload */}
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Image</label>
-            <input
-              type="file"
-              name="image"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="w-full"
-              // Only required when adding
-              required={!editId}
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              {editId ? "Update" : "Submit"}
-            </button>
-
-            {editId && (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
+          Gurukulam
+        </button>
+        <button
+          onClick={() => { setTab("adrishya"); resetForm(); }}
+          className={`px-4 py-2 rounded ${tab === "adrishya" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+        >
+          Adrishya
+        </button>
       </div>
 
-      {/* Right side: list */}
-      <div className="w-1/2">
-        <h2 className="text-2xl font-semibold mb-6">Uploaded Activities</h2>
-        <div className="space-y-4">
-          {activities.length === 0 ? (
-            <p className="text-gray-500">No activities available.</p>
-          ) : (
-            activities.map((act) => (
-              <div
-                key={act.id}
-                className="flex items-start gap-4 bg-white shadow rounded p-4"
-              >
-                {/* Image */}
-                {act.image && (
-                  <img
-                    src={act.image}
-                    alt={act.title}
-                    className="w-24 h-24 object-cover rounded"
-                  />
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-3 border p-4 rounded shadow">
+        <input
+          type="text"
+          name="title"
+          value={form.title}
+          onChange={handleChange}
+          placeholder="Enter title"
+          className="border p-2 w-full"
+          required
+        />
+        <textarea
+          name="des"
+          value={form.des}
+          onChange={handleChange}
+          placeholder="Enter description"
+          className="border p-2 w-full"
+          required
+        />
+        {tab === "gurukulam" && (
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="border p-2 w-full"
+          />
+        )}
+        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+          {editId ? "Update" : "Create"}
+        </button>
+      </form>
+
+      {/* List */}
+      {tab === "gurukulam" && (
+        <div>
+          <h2 className="text-lg font-bold mb-3">Gurukulam Activities</h2>
+          <ul className="space-y-4">
+            {gurukulamData.map((act) => (
+              <li key={act.id} className="border p-3 rounded shadow">
+                <h3 className="font-semibold">{act.title}</h3>
+                <p>{act.des}</p>
+                {act.image && <img src={act.image} alt="upload" className="w-32 mt-2" />}
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => handleEdit(act)} className="bg-yellow-500 text-white px-3 py-1 rounded">Edit</button>
+                  <button onClick={() => handleDelete(act.id)} className="bg-red-500 text-white px-3 py-1 rounded">Delete</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {tab === "adrishya" && (
+        <div>
+          <h2 className="text-lg font-bold mb-3">Adrishya Activities</h2>
+          <ul className="space-y-4">
+            {adrishyaData.map((act) => (
+              <li key={act.id} className="border p-3 rounded shadow">
+                <h3 className="font-semibold">{act.title}</h3>
+                <p>{act.des}</p>
+
+                {/* Show images */}
+                {act.image && act.image.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {act.image.map((img, i) => (
+                      <img key={i} src={img} alt="upload" className="w-24 h-24 object-cover border" />
+                    ))}
+                  </div>
                 )}
 
-                {/* Content */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold">{act.title}</h3>
-                  <p className="text-gray-600">{act.des}</p>
+                {/* Upload new image */}
+                {uploadTarget === act.id ? (
+                  <form onSubmit={(e) => handleImageUpload(e, act.id)} className="mt-2 flex gap-2">
+                    <input
+                      type="file"
+                      onChange={(e) => setUploadImage(e.target.files[0])}
+                      className="border p-2"
+                    />
+                    <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded">Upload</button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setUploadTarget(act.id)}
+                    className="bg-purple-500 text-white px-3 py-1 rounded mt-2"
+                  >
+                    Add Image
+                  </button>
+                )}
 
-                  {/* Actions */}
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => handleEdit(act)}
-                      className="px-3 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(act.id)}
-                      className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => handleEdit(act)} className="bg-yellow-500 text-white px-3 py-1 rounded">Edit</button>
+                  <button onClick={() => handleDelete(act.id)} className="bg-red-500 text-white px-3 py-1 rounded">Delete</button>
                 </div>
-              </div>
-            ))
-          )}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      )}
     </div>
   );
 }
