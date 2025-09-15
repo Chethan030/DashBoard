@@ -12,7 +12,7 @@ export default function ActivitiesDashboard() {
 
   // Endpoints
   const endpoints = {
-    gurukulam: "gurukulam/activities/",
+    gurukulam: "gukulam_activities/",
     adrishya: "adrishya/activities/",
     adrishyaImage: "adrishya/image/",
   };
