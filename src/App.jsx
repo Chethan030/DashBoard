@@ -3,10 +3,10 @@ import Navbar from "./Components/Navbar";
 import Sidebar from "./Components/SideBar";
 import Home from "./Pages/Home";
 import Activities from "./Pages/Activities";
-import EventGallery from "./Pages/Gallery";
 import News from "./Pages/News";
 import Team from "./Pages/Team";
 import SteeringTeam from "./Pages/BoardTeam";
+import CombinedGallery from './Pages/Gallery'
 function App() {
 
   return (
@@ -19,7 +19,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
                <Route path="/activities" element={<Activities />} />
-              <Route path="/gallery" element={<EventGallery />} />
+              <Route path="/gallery" element={<CombinedGallery />} />
               <Route path="/news" element={<News />} />
               <Route path="/team" element={<Team />} />
               <Route path="/board_team" element={<SteeringTeam />} />

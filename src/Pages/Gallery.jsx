@@ -1,57 +1,57 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
-export default function EventGallery() {
-  const [events, setEvents] = useState([]);
-  const [formData, setFormData] = useState({
-    date: "",
-    image: null,
-  });
+export default function GalleryToggle() {
+  const [galleryType, setGalleryType] = useState("gurukulam"); // "gurukulam" | "adrishya"
+  const [formData, setFormData] = useState({ date: "", image: null });
+  const [images, setImages] = useState([]);
 
   const host_url = "http://127.0.0.1:8000/";
+  const endpoint = `gallery/${galleryType}/`;
 
-  const fetchEvents = async () => {
+  // GET
+  const fetchGallery = async () => {
     try {
-      const res = await fetch(host_url + "gallery/gurukulam/");
+      const res = await fetch(host_url + endpoint);
       if (res.ok) {
         const data = await res.json();
-        setEvents(Array.isArray(data) ? data : [data]);
+        setImages(Array.isArray(data) ? data : [data]);
       } else {
-        console.error("Failed to fetch events");
+        console.error("Failed to fetch images");
       }
     } catch (err) {
-      console.error("Error fetching event gallery:", err);
+      console.error("Error:", err);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    fetchGallery();
+    setFormData({ date: "", image: null }); // reset form when toggle
+  }, [galleryType]);
 
-  const handleChange = (e) => {
+  // FORM
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e) =>
     setFormData({ ...formData, image: e.target.files[0] });
-  };
 
+  // POST
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const data = new FormData();
-    data.append("date", formData.date);
-    data.append("images", formData.image);
+    const form = new FormData();
+    form.append("date", formData.date);
+    form.append(galleryType === "gurukulam" ? "images" : "image", formData.image);
 
     try {
-      const res = await fetch(host_url + "gallery/gurukulam/", {
+      const res = await fetch(host_url + endpoint, {
         method: "POST",
-        body: data,
+        body: form,
       });
 
       if (res.ok) {
-        alert("Event image uploaded!");
+        alert("Image uploaded!");
         setFormData({ date: "", image: null });
-        fetchEvents();
+        fetchGallery();
       } else {
         const error = await res.json();
         alert("Upload failed: " + JSON.stringify(error));
@@ -61,17 +61,16 @@ export default function EventGallery() {
     }
   };
 
+  // DELETE
   const handleDelete = async (id) => {
-    if (!confirm("Delete this image?")) return;
-
+    if (!confirm("Are you sure to delete this image?")) return;
     try {
-      const res = await fetch(host_url + `gallery/gurukulam/${id}/`, {
+      const res = await fetch(`${host_url}${endpoint}${id}/`, {
         method: "DELETE",
       });
-
       if (res.ok) {
         alert("Deleted!");
-        fetchEvents();
+        fetchGallery();
       } else {
         alert("Failed to delete.");
       }
@@ -81,16 +80,37 @@ export default function EventGallery() {
   };
 
   return (
-    <div className="p-6 flex flex-col md:flex-row gap-6 max-w-7xl mx-auto">
-      {/* Left: Upload Form */}
-      <div className="md:w-1/2 w-full">
-        <h2 className="text-2xl font-semibold mb-6">Upload Event Image</h2>
-
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white shadow-md rounded p-6"
-          encType="multipart/form-data"
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Toggle Buttons */}
+      <div className="flex justify-center mb-6 gap-4">
+        <button
+          className={`px-4 py-2 rounded ${
+            galleryType === "gurukulam"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+          onClick={() => setGalleryType("gurukulam")}
         >
+          Gurukulam Gallery
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${
+            galleryType === "adrishya"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+          onClick={() => setGalleryType("adrishya")}
+        >
+          Adrishya Gallery
+        </button>
+      </div>
+
+      {/* Form */}
+      <div className="bg-white shadow rounded p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">
+          Upload to {galleryType === "gurukulam" ? "Gurukulam" : "Adrishya"} Gallery
+        </h2>
+        <form onSubmit={handleSubmit} encType="multipart/form-data">
           <div className="mb-4">
             <label className="block text-gray-700 mb-1">Date</label>
             <input
@@ -109,8 +129,8 @@ export default function EventGallery() {
               type="file"
               accept="image/*"
               onChange={handleFileChange}
-              required
               className="w-full"
+              required
             />
           </div>
 
@@ -123,32 +143,33 @@ export default function EventGallery() {
         </form>
       </div>
 
-      {/* Right: Gallery Grid */}
-      <div className="md:w-1/2 w-full">
-        <h2 className="text-2xl font-semibold mb-6">Event Gallery</h2>
-
-        {events.length === 0 ? (
+      {/* Gallery Grid */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">
+          {galleryType === "gurukulam" ? "Gurukulam" : "Adrishya"} Gallery
+        </h2>
+        {images.length === 0 ? (
           <p className="text-gray-500">No images uploaded yet.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {events.map((event) =>
-              event.images ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {images.map((img) =>
+              img.image || img.images ? (
                 <div
-                  key={event.id}
+                  key={img.id}
                   className="bg-white shadow rounded overflow-hidden relative group"
                 >
                   <img
-                    src={event.images}
-                    alt="Event"
-                    className="w-full h-48 object-cover group-hover:opacity-90 transition duration-200"
+                    src={img.image || img.images}
+                    alt="Gallery"
+                    className="w-full h-64 object-cover group-hover:opacity-90 transition duration-200"
                   />
                   <div className="p-4">
                     <h3 className="text-sm font-medium text-gray-700">
-                      📅 {event.date || "No date"}
+                      📅 {img.date || "N/A"}
                     </h3>
                   </div>
                   <button
-                    onClick={() => handleDelete(event.id)}
+                    onClick={() => handleDelete(img.id)}
                     className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700"
                   >
                     Delete
