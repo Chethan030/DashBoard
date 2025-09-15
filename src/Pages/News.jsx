@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "../service/api"; // your axios instance
 
 export default function News() {
   const [formData, setFormData] = useState({
@@ -11,7 +12,7 @@ export default function News() {
   const [newsList, setNewsList] = useState([]);
   const [editId, setEditId] = useState(null);
 
-  const host_url = "http://127.0.0.1:8000/";
+  const endpoint = "news/";
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -23,11 +24,8 @@ export default function News() {
 
   const fetchNews = async () => {
     try {
-      const response = await fetch(host_url + "news/");
-      if (response.ok) {
-        const data = await response.json();
-        setNewsList(data);
-      }
+      const response = await axios.get(endpoint);
+      setNewsList(response.data);
     } catch (error) {
       console.error("Error fetching news:", error);
     }
@@ -48,30 +46,34 @@ export default function News() {
       formDataToSend.append("image", formData.image);
     }
 
-    const url = host_url + "news/" + (editId ? `${editId}/` : "");
-
     try {
-      const response = await fetch(url, {
-        method: editId ? "PUT" : "POST",
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        alert(editId ? "News updated!" : "News added!");
-        setFormData({
-          news_name: "",
-          description: "",
-          date: "",
-          image: null,
+      if (editId) {
+        await axios.put(`${endpoint}${editId}/`, formDataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
-        setEditId(null);
-        fetchNews();
+        alert("News updated!");
       } else {
-        const error = await response.json();
-        alert("Error: " + JSON.stringify(error));
+        await axios.post(endpoint, formDataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("News added!");
       }
+
+      setFormData({
+        news_name: "",
+        description: "",
+        date: "",
+        image: null,
+      });
+      setEditId(null);
+      fetchNews();
     } catch (error) {
-      alert("Failed to submit: " + error.message);
+      alert(
+        "Failed to submit: " +
+          (error.response?.data
+            ? JSON.stringify(error.response.data)
+            : error.message)
+      );
     }
   };
 
@@ -79,17 +81,16 @@ export default function News() {
     if (!confirm("Are you sure you want to delete this news item?")) return;
 
     try {
-      const response = await fetch(host_url + `news/${id}/`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        alert("Deleted successfully!");
-        fetchNews();
-      } else {
-        alert("Failed to delete.");
-      }
+      await axios.delete(`${endpoint}${id}/`);
+      alert("Deleted successfully!");
+      fetchNews();
     } catch (error) {
-      alert("Error deleting: " + error.message);
+      alert(
+        "Error deleting: " +
+          (error.response?.data
+            ? JSON.stringify(error.response.data)
+            : error.message)
+      );
     }
   };
 

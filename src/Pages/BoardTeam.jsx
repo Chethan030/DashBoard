@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "../service/api"; // Your axios instance
 
 export default function SteeringTeam() {
   const [formData, setFormData] = useState({
@@ -9,7 +10,7 @@ export default function SteeringTeam() {
   const [members, setMembers] = useState([]);
   const [editId, setEditId] = useState(null);
 
-  const host_url = "http://127.0.0.1:8000/steeringboard-team/";
+  const endpoint = "steeringboard-team/";
 
   // Handle text input
   const handleChange = (e) => {
@@ -24,11 +25,8 @@ export default function SteeringTeam() {
   // Fetch members
   const fetchMembers = async () => {
     try {
-      const response = await fetch(host_url);
-      if (response.ok) {
-        const data = await response.json();
-        setMembers(data);
-      }
+      const response = await axios.get(endpoint);
+      setMembers(response.data);
     } catch (error) {
       console.error("Error fetching team members:", error);
     }
@@ -38,7 +36,7 @@ export default function SteeringTeam() {
     fetchMembers();
   }, []);
 
-  // Handle submit
+  // Handle submit (create or update)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -48,53 +46,48 @@ export default function SteeringTeam() {
       formDataToSend.append("image", formData.image);
     }
 
-    const url = editId ? `${host_url}${editId}/` : host_url;
-
     try {
-      const response = await fetch(url, {
-        method: editId ? "PUT" : "POST",
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        alert(editId ? "Member updated!" : "Member added!");
-        setFormData({ name: "", image: null });
-        setEditId(null);
-        fetchMembers();
+      if (editId) {
+        await axios.put(`${endpoint}${editId}/`, formDataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Member updated!");
       } else {
-        const error = await response.json();
-        alert("Error: " + JSON.stringify(error));
+        await axios.post(endpoint, formDataToSend, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Member added!");
       }
+
+      setFormData({ name: "", image: null });
+      setEditId(null);
+      fetchMembers();
     } catch (error) {
-      alert("Failed to submit: " + error.message);
+      alert("Failed to submit: " + (error.response?.data || error.message));
     }
   };
 
-  // Delete
+  // Delete member
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this member?")) return;
 
     try {
-      const response = await fetch(`${host_url}${id}/`, { method: "DELETE" });
-      if (response.ok) {
-        alert("Deleted successfully!");
-        fetchMembers();
-      } else {
-        alert("Failed to delete.");
-      }
+      await axios.delete(`${endpoint}${id}/`);
+      alert("Deleted successfully!");
+      fetchMembers();
     } catch (error) {
-      alert("Error deleting: " + error.message);
+      alert("Error deleting: " + (error.response?.data || error.message));
     }
   };
 
-  // Edit
+  // Edit member
   const handleEdit = (member) => {
     setFormData({ name: member.name, image: null });
     setEditId(member.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Cancel Edit
+  // Cancel edit
   const cancelEdit = () => {
     setFormData({ name: "", image: null });
     setEditId(null);
